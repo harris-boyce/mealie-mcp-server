@@ -1,12 +1,13 @@
-from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp.prompts.base import AssistantMessage, Message, UserMessage
+from fastmcp import FastMCP
+from fastmcp.prompts import PromptMessage
+from fastmcp.prompts.prompt import TextContent
 
 
 def register_prompts(mcp: FastMCP) -> None:
     """Register all prompt-related tools with the MCP server."""
 
     @mcp.prompt()
-    def weekly_meal_plan(preferences: str = "") -> list[Message]:
+    def weekly_meal_plan(preferences: str = "") -> list[PromptMessage]:
         """Generates a weekly meal plan template.
 
         Args:
@@ -53,8 +54,14 @@ You have access to a Mealie recipe database with various recipes. You can search
         if preferences:
             user_content += f" My preferences are: {preferences}"
 
-        # Create and return a list of Message objects
+        # Create and return a list of PromptMessage objects
         return [
-            AssistantMessage(system_content),
-            UserMessage(user_content),
+            PromptMessage(
+                role="assistant",
+                content=TextContent(type="text", text=system_content)
+            ),
+            PromptMessage(
+                role="user",
+                content=TextContent(type="text", text=user_content)
+            ),
         ]

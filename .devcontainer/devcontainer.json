@@ -1,0 +1,54 @@
+{
+    "name": "Mealie MCP Server",
+    "image": "mcr.microsoft.com/devcontainers/python:3.12",
+    // Configure tool-specific properties
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.linting.enabled": true,
+                "python.formatting.provider": "black",
+                "python.linting.pylintEnabled": false,
+                "python.linting.flake8Enabled": false,
+                "editor.formatOnSave": true,
+                "editor.codeActionsOnSave": {
+                    "source.organizeImports": "explicit"
+                }
+            },
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.black-formatter",
+                "ms-python.isort"
+            ]
+        }
+    },
+    // Use 'forwardPorts' to make a list of ports inside the container available locally
+    "forwardPorts": [
+        6274,
+        6277
+    ],
+    // Use 'postCreateCommand' to run commands after the container is created
+    "postCreateCommand": "pip install -e '.[dev]'",
+    // Configure container user
+    "remoteUser": "vscode",
+    // Set container features
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "installZsh": true,
+            "installOhMyZsh": true,
+            "upgradePackages": true,
+            "username": "vscode",
+            "userUid": "1000",
+            "userGid": "1000"
+        },
+        "ghcr.io/devcontainers/features/git:1": {
+            "version": "latest"
+        },
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "lts",
+            "nodeGypDependencies": true,
+            "installYarnUsingApt": true
+        }
+    }
+}

@@ -9,7 +9,7 @@ logger = logging.getLogger("mealie-mcp")
 class MealplanMixin:
     """Mixin class for mealplan-related API endpoints"""
 
-    def get_mealplans(
+    async def get_mealplans(
         self,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
@@ -40,12 +40,12 @@ class MealplanMixin:
         params = format_api_params(param_dict)
 
         logger.info({"message": "Retrieving mealplans", "parameters": params})
-        response = self._handle_request(
+        response = await self._handle_request(
             "GET", "/api/households/mealplans", params=params
         )
         return response
 
-    def create_mealplan(
+    async def create_mealplan(
         self,
         date: str,
         recipe_id: Optional[str] = None,
@@ -90,9 +90,9 @@ class MealplanMixin:
                 "entry_type": entry_type,
             }
         )
-        return self._handle_request("POST", "/api/households/mealplans", json=payload)
+        return await self._handle_request("POST", "/api/households/mealplans", json=payload)
 
-    def get_todays_mealplan(self) -> List[Dict[str, Any]]:
+    async def get_todays_mealplan(self) -> List[Dict[str, Any]]:
         """Get the mealplan entries for today.
 
         Returns:
@@ -102,4 +102,4 @@ class MealplanMixin:
             MealieApiError: If the API request fails
         """
         logger.info({"message": "Retrieving today's mealplan"})
-        return self._handle_request("GET", "/api/households/mealplans/today")
+        return await self._handle_request("GET", "/api/households/mealplans/today")

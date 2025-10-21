@@ -1,12 +1,12 @@
 import logging
 import traceback
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
+from fastmcp.exceptions import ToolError
 
 from mealie import MealieFetcher
 from models.recipe import Recipe, RecipeIngredient, RecipeInstruction
-from utils import format_error_response
 
 logger = logging.getLogger("mealie-mcp")
 
@@ -15,13 +15,13 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
     """Register all recipe-related tools with the MCP server."""
 
     @mcp.tool()
-    def get_recipes(
+    async def get_recipes(
         search: Optional[str] = None,
         page: Optional[int] = None,
         per_page: Optional[int] = None,
         categories: Optional[List[str]] = None,
         tags: Optional[List[str]] = None,
-    ) -> str:
+    ) -> Dict[str, Any]:
         """Provides a paginated list of recipes with optional filtering.
 
         Args:
@@ -32,7 +32,7 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
             tags: Filter by specific recipe tags.
 
         Returns:
-            str: Recipe summaries with details like ID, name, description, and image information.
+            Dict[str, Any]: Recipe summaries with details like ID, name, description, and image information.
         """
         try:
             logger.info(
@@ -45,7 +45,7 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
                     "tags": tags,
                 }
             )
-            return mealie.get_recipes(
+            return await mealie.get_recipes(
                 search=search,
                 page=page,
                 per_page=per_page,
@@ -58,10 +58,10 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
             logger.debug(
                 {"message": "Error traceback", "traceback": traceback.format_exc()}
             )
-            return format_error_response(error_msg)
+            raise ToolError(error_msg)
 
     @mcp.tool()
-    def get_recipe_detailed(slug: str) -> str:
+    async def get_recipe_detailed(slug: str) -> Dict[str, Any]:
         """Retrieve a specific recipe by its slug identifier. Use this when to get full recipe
         details for tasks like updating or displaying the recipe.
 
@@ -70,22 +70,22 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
                 or from get_recipes results.
 
         Returns:
-            str: Comprehensive recipe details including ingredients, instructions,
+            Dict[str, Any]: Comprehensive recipe details including ingredients, instructions,
                 nutrition information, notes, and associated metadata.
         """
         try:
             logger.info({"message": "Fetching recipe", "slug": slug})
-            return mealie.get_recipe(slug)
+            return await mealie.get_recipe(slug)
         except Exception as e:
             error_msg = f"Error fetching recipe with slug '{slug}': {str(e)}"
             logger.error({"message": error_msg})
             logger.debug(
                 {"message": "Error traceback", "traceback": traceback.format_exc()}
             )
-            return format_error_response(error_msg)
+            raise ToolError(error_msg)
 
     @mcp.tool()
-    def get_recipe_concise(slug: str) -> str:
+    async def get_recipe_concise(slug: str) -> Dict[str, Any]:
         """Retrieve a concise version of a specific recipe by its slug identifier. Use this when you only
         need a summary of the recipe, such as for when mealplaning.
 
@@ -93,11 +93,12 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
             slug: The unique text identifier for the recipe, typically found in recipe URLs
                 or from get_recipes results.
 
-
+        Returns:
+            Dict[str, Any]: Concise recipe summary with essential fields.
         """
         try:
             logger.info({"message": "Fetching recipe", "slug": slug})
-            recipe_json = mealie.get_recipe(slug)
+            recipe_json = await mealie.get_recipe(slug)
             recipe = Recipe.model_validate(recipe_json)
             return recipe.model_dump(
                 include={
@@ -108,7 +109,7 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
                     "recipeYield",
                     "totalTime",
                     "rating",
-                      "recipeIngredient",
+                    "recipeIngredient",
                     "lastMade",
                 },
                 exclude_none=True,
@@ -119,12 +120,12 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
             logger.debug(
                 {"message": "Error traceback", "traceback": traceback.format_exc()}
             )
-            return format_error_response(error_msg)
+            raise ToolError(error_msg)
 
     @mcp.tool()
-    def create_recipe(
-        name: str, ingredients: list[str], instructions: list[str]
-    ) -> str:
+    async def create_recipe(
+        name: str, ingredients: List[str], instructions: List[str]
+    ) -> Dict[str, Any]:
         """Create a new recipe
 
         Args:
@@ -133,32 +134,32 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
             instructions: A list of instructions for preparing the recipe.
 
         Returns:
-            str: Confirmation message or details about the created recipe.
+            Dict[str, Any]: The created recipe details.
         """
         try:
             logger.info({"message": "Creating recipe", "name": name})
-            slug = mealie.create_recipe(name)
-            recipe_json = mealie.get_recipe(slug)
+            slug = await mealie.create_recipe(name)
+            recipe_json = await mealie.get_recipe(slug)
             recipe = Recipe.model_validate(recipe_json)
             recipe.recipeIngredient = [RecipeIngredient(note=i) for i in ingredients]
             recipe.recipeInstructions = [
                 RecipeInstruction(text=i) for i in instructions
             ]
-            return mealie.update_recipe(slug, recipe.model_dump(exclude_none=True))
+            return await mealie.update_recipe(slug, recipe.model_dump(exclude_none=True))
         except Exception as e:
             error_msg = f"Error creating recipe '{name}': {str(e)}"
             logger.error({"message": error_msg})
             logger.debug(
                 {"message": "Error traceback", "traceback": traceback.format_exc()}
             )
-            return format_error_response(error_msg)
+            raise ToolError(error_msg)
 
     @mcp.tool()
-    def update_recipe(
+    async def update_recipe(
         slug: str,
-        ingredients: list[str],
-        instructions: list[str],
-    ) -> str:
+        ingredients: List[str],
+        instructions: List[str],
+    ) -> Dict[str, Any]:
         """Replaces the ingredients and instructions of an existing recipe.
 
         Args:
@@ -167,21 +168,21 @@ def register_recipe_tools(mcp: FastMCP, mealie: MealieFetcher) -> None:
             instructions: A list of instructions for preparing the recipe.
 
         Returns:
-            str: Confirmation message or details about the updated recipe.
+            Dict[str, Any]: The updated recipe details.
         """
         try:
             logger.info({"message": "Updating recipe", "slug": slug})
-            recipe_json = mealie.get_recipe(slug)
+            recipe_json = await mealie.get_recipe(slug)
             recipe = Recipe.model_validate(recipe_json)
             recipe.recipeIngredient = [RecipeIngredient(note=i) for i in ingredients]
             recipe.recipeInstructions = [
                 RecipeInstruction(text=i) for i in instructions
             ]
-            return mealie.update_recipe(slug, recipe.model_dump(exclude_none=True))
+            return await mealie.update_recipe(slug, recipe.model_dump(exclude_none=True))
         except Exception as e:
             error_msg = f"Error updating recipe '{slug}': {str(e)}"
             logger.error({"message": error_msg})
             logger.debug(
                 {"message": "Error traceback", "traceback": traceback.format_exc()}
             )
-            return format_error_response(error_msg)
+            raise ToolError(error_msg)

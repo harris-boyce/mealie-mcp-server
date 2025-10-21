@@ -1,0 +1,9 @@
+{
+	"servers": {
+		"my-mcp-server-4cf6abe3": {
+			"url": "https://mealie-mcp-server.taildda370.ts.net/mcp",
+			"type": "sse"
+		}
+	},
+	"inputs": []
+}

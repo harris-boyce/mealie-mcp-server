@@ -9,7 +9,7 @@ logger = logging.getLogger("mealie-mcp")
 class RecipeMixin:
     """Mixin class for recipe-related API endpoints"""
 
-    def get_recipes(
+    async def get_recipes(
         self,
         search: Optional[str] = None,
         order_by: Optional[str] = None,
@@ -59,9 +59,9 @@ class RecipeMixin:
         params = format_api_params(param_dict)
 
         logger.info({"message": "Retrieving recipes", "parameters": params})
-        return self._handle_request("GET", "/api/recipes", params=params)
+        return await self._handle_request("GET", "/api/recipes", params=params)
 
-    def get_recipe(self, slug: str) -> Dict[str, Any]:
+    async def get_recipe(self, slug: str) -> Dict[str, Any]:
         """Retrieve a specific recipe by its slug
 
         Args:
@@ -74,9 +74,9 @@ class RecipeMixin:
             raise ValueError("Recipe slug cannot be empty")
 
         logger.info({"message": "Retrieving recipe", "slug": slug})
-        return self._handle_request("GET", f"/api/recipes/{slug}")
+        return await self._handle_request("GET", f"/api/recipes/{slug}")
 
-    def update_recipe(self, slug: str, recipe_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def update_recipe(self, slug: str, recipe_data: Dict[str, Any]) -> Dict[str, Any]:
         """Update a specific recipe by its slug
 
         Args:
@@ -92,9 +92,9 @@ class RecipeMixin:
             raise ValueError("Recipe data cannot be empty")
 
         logger.info({"message": "Updating recipe", "slug": slug})
-        return self._handle_request("PUT", f"/api/recipes/{slug}", json=recipe_data)
+        return await self._handle_request("PUT", f"/api/recipes/{slug}", json=recipe_data)
 
-    def create_recipe(self, name: str) -> str:
+    async def create_recipe(self, name: str) -> str:
         """Create a new recipe
 
         Args:
@@ -104,4 +104,4 @@ class RecipeMixin:
             Slug of the newly created recipe
         """
         logger.info({"message": "Creating new recipe", "name": name})
-        return self._handle_request("POST", "/api/recipes", json={"name": name})
+        return await self._handle_request("POST", "/api/recipes", json={"name": name})

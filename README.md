@@ -9,6 +9,22 @@ This project enables AI assistants to interact with your [Mealie](https://github
 - Python 3.12+
 - Running Mealie instance with API key
 - Package manager [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- (Optional) Home Assistant instance with long-lived access token for calendar integration
+
+## Features
+
+### Core Features (Mealie)
+- **Recipe Management**: Search, retrieve, create, and update recipes
+- **Meal Planning**: Create and manage meal plans with bulk operations
+- **Food Inventory**: Track foods on-hand with quantity/price management
+- **Shopping Lists**: Manage shopping lists (via Home Assistant integration)
+
+### Extended Features (Home Assistant Integration - Optional)
+- **Calendar Integration**: Query custody schedules and family activity calendars
+- **Context-Aware Meal Planning**: Match meal complexity to schedule events
+- **Voice-Driven Workflow**: Designed for conversational meal planning
+
+See [meal-planning-skill/SKILL.md](meal-planning-skill/SKILL.md) for the complete voice-driven meal planning workflow.
 
 ## Usage with Claude Desktop
 
@@ -16,10 +32,20 @@ This project enables AI assistants to interact with your [Mealie](https://github
 
 Install the server directly with the `fastmcp` command:
 
+**Mealie Only:**
 ```bash
 fastmcp install src/server.py \
   --env-var MEALIE_BASE_URL=https://your-mealie-instance.com \
   --env-var MEALIE_API_KEY=your-mealie-api-key
+```
+
+**With Home Assistant Integration:**
+```bash
+fastmcp install src/server.py \
+  --env-var MEALIE_BASE_URL=https://your-mealie-instance.com \
+  --env-var MEALIE_API_KEY=your-mealie-api-key \
+  --env-var HA_URL=https://your-homeassistant.com \
+  --env-var HA_TOKEN=your-ha-long-lived-token
 ```
 
 ### Option 2: Manual Configuration
@@ -62,8 +88,13 @@ cp .env.template .env
 
 4. Edit the `.env` file with your Mealie instance details:
 ```bash
+# Mealie configuration (required)
 MEALIE_BASE_URL=https://your-mealie-instance.com
 MEALIE_API_KEY=your-mealie-api-key
+
+# Home Assistant configuration (optional)
+HA_URL=https://your-homeassistant.com
+HA_TOKEN=your-ha-long-lived-token
 ```
 
 5. Run MCP inspector

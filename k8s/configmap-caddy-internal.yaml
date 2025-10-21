@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: caddy-config
+  namespace: mealie-mcp
+data:
+  Caddyfile: |
+    {
+      # Global options
+      auto_https disable_redirects
+      admin off
+      log {
+        output stdout
+        format json
+      }
+    }
+
+    # Internal service with self-signed certificate
+    :443 {
+      # Generate self-signed certificate on first run
+      tls internal
+      
+      # Reverse proxy to MCP server on localhost:8000
+      reverse_proxy localhost:8000 {
+        # Health check configuration
+        health_uri /health
+        health_interval 10s
+        health_timeout 5s
+      }
+      
+      # Logging
+      log {
+        output stdout
+        format json
+      }
+      
+      # Response headers
+      header {
+        # Security headers
+        Strict-Transport-Security "max-age=31536000;"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        -Server
+      }
+    }

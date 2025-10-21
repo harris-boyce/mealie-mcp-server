@@ -1,7 +1,7 @@
 import json
 import logging
 import traceback
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import httpx
 from httpx import ConnectError, HTTPStatusError, ReadTimeout
@@ -28,35 +28,48 @@ class MealieClient:
             raise ValueError("API key cannot be empty")
 
         logger.debug({"message": "Initializing MealieClient", "base_url": base_url})
-        try:
-            self._client = httpx.Client(
-                base_url=base_url,
+        self.base_url = base_url
+        self.api_key = api_key
+        self._client: Optional[httpx.AsyncClient] = None
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        """Get or create async HTTP client."""
+        if self._client is None or self._client.is_closed:
+            self._client = httpx.AsyncClient(
+                base_url=self.base_url,
                 headers={
-                    "Authorization": f"Bearer {api_key}",
+                    "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
                 },
-                timeout=30.0,  # Set a reasonable timeout for requests
+                timeout=30.0,
             )
             # Test connection
             logger.debug({"message": "Testing connection to Mealie API"})
-            self._client.get("/api/app/about")
-            logger.info({"message": "Successfully connected to Mealie API"})
-        except ConnectError as e:
-            error_msg = f"Failed to connect to Mealie API at {base_url}: {str(e)}"
-            logger.error({"message": error_msg})
-            logger.debug(
-                {"message": "Error traceback", "traceback": traceback.format_exc()}
-            )
-            raise ConnectionError(error_msg) from e
-        except Exception as e:
-            error_msg = f"Error initializing Mealie client: {str(e)}"
-            logger.error({"message": error_msg})
-            logger.debug(
-                {"message": "Error traceback", "traceback": traceback.format_exc()}
-            )
-            raise
+            try:
+                await self._client.get("/api/app/about")
+                logger.info({"message": "Successfully connected to Mealie API"})
+            except ConnectError as e:
+                error_msg = f"Failed to connect to Mealie API at {self.base_url}: {str(e)}"
+                logger.error({"message": error_msg})
+                logger.debug(
+                    {"message": "Error traceback", "traceback": traceback.format_exc()}
+                )
+                raise ConnectionError(error_msg) from e
+            except Exception as e:
+                error_msg = f"Error connecting to Mealie API: {str(e)}"
+                logger.error({"message": error_msg})
+                logger.debug(
+                    {"message": "Error traceback", "traceback": traceback.format_exc()}
+                )
+                raise
+        return self._client
 
-    def _handle_request(self, method: str, url: str, **kwargs) -> Dict[str, Any] | str:
+    async def close(self):
+        """Close the async HTTP client."""
+        if self._client and not self._client.is_closed:
+            await self._client.close()
+
+    async def _handle_request(self, method: str, url: str, **kwargs) -> Dict[str, Any] | str:
         """Common request handler with error handling for all API calls."""
         try:
             logger.debug(
@@ -75,7 +88,8 @@ class MealieClient:
             if "json" in kwargs:
                 logger.debug({"message": "Request payload", "payload": kwargs["json"]})
 
-            response = self._client.request(method, url, **kwargs)
+            client = await self._get_client()
+            response = await client.request(method, url, **kwargs)
             response.raise_for_status()  # Raise an exception for 4XX/5XX responses
 
             logger.debug(
